@@ -6,14 +6,14 @@ const MEMBERS = [
   { name: "Rodas",  ar: "رودس" },
   { name: "Andi",   ar: "آندي" },
   { name: "Rayan",  ar: "ريان" },
-  { name: "Julian", ar: "جوليان" },
+  { name: "Administrator", ar: "المسؤول", key: "julian" },
   { name: "Ziad",   ar: "زياد" },
   { name: "Onel",   ar: "أونيل" },
   { name: "Anwar",  ar: "أنور", aliases: ["Ano", "أنو"] }
 ];
 
 // This member sees everyone's votes
-const OWNER = "Julian";
+const OWNER = "Administrator";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -26,7 +26,7 @@ const findMember = (typed) => {
   const t = clean(typed);
   return MEMBERS.find((m) => [m.name, m.ar, ...(m.aliases || [])].some((n) => clean(n) === t)) || null;
 };
-const keyOf = (member) => member.name.toLowerCase();
+const keyOf = (member) => member.key || member.name.toLowerCase();
 const validDays = (days) =>
   Array.isArray(days) && days.length <= 31 && days.every((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
 

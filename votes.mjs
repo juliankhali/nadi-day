@@ -8,6 +8,7 @@ const MEMBERS = [
   { name: "Rayan",  ar: "ريان" },
   { name: "Julian", ar: "جوليان" },
   { name: "Ziad",   ar: "زياد" },
+  { name: "Onel",   ar: "أونيل" },
   { name: "Anwar",  ar: "أنور", aliases: ["Ano", "أنو"] }
 ];
 

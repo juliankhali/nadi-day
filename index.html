@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Pick the day you are coming to the Nadi.">
+<title>Nadi Voting Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Cairo:wght@400;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: stage 1 = full welcome sign-in screen; stage 2 = hero with live Iraq clock + day picker; owner-only results tab */
+:root {
+  --bg: #eef3f0;
+  --surface: #ffffff;
+  --surface-2: #f6f9f7;
+  --fg: #12201a;
+  --muted: #5b6d63;
+  --line: #dde6e0;
+  --accent: #17704a;
+  --accent-2: #2aa36b;
+  --accent-soft: #e1f1e8;
+  --on-accent: #ffffff;
+  --danger: #b4412f;
+  --hero-1: #0f4d33;
+  --hero-2: #1c8a5a;
+  --shadow: 0 1px 2px rgba(18,32,26,.06), 0 8px 24px rgba(18,32,26,.07);
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Manrope", "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[lang="ar"] { --font-body: "Cairo", "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1410; --surface: #141f19; --surface-2: #18251e; --fg: #e7f0ea; --muted: #94a89c;
+    --line: #26362d; --accent: #47c084; --accent-2: #6fd8a2; --accent-soft: #1a3226; --on-accent: #08130d; --danger: #ef8a78;
+    --hero-1: #0f3a27; --hero-2: #17643f; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1410; --surface: #141f19; --surface-2: #18251e; --fg: #e7f0ea; --muted: #94a89c;
+  --line: #26362d; --accent: #47c084; --accent-2: #6fd8a2; --accent-soft: #1a3226; --on-accent: #08130d; --danger: #ef8a78;
+  --hero-1: #0f3a27; --hero-2: #17643f; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding: 20px 16px 56px;
+}
+.wrap { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.wrap[data-stage="login"] .app-only, .wrap[data-stage="app"] .login-only { display: none !important; }
+.wrap[data-view="pick"] .results-only, .wrap[data-view="results"] .pick-only { display: none !important; }
+
+/* Top bar */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tabs { display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); box-shadow: var(--shadow); }
+.tab { font: inherit; font-weight: 700; font-size: 14px; border: 0; background: transparent; color: var(--muted); padding: 6px 16px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.tab .lock { width: 12px; height: 12px; }
+.spacer { flex: 1; }
+.lang {
+  font: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px;
+  border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); box-shadow: var(--shadow);
+}
+[dir="rtl"] .lang { padding: 6px 6px 6px 14px; }
+.lang .badge { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 800; }
+.lang:hover { border-color: var(--accent); }
+
+/* Welcome sign-in screen */
+.welcome {
+  position: relative; overflow: hidden; border-radius: 24px; padding: 48px 24px 36px; min-height: 520px;
+  background: linear-gradient(160deg, var(--hero-1), var(--hero-2)); color: #ffffff; box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.orb { position: absolute; border-radius: 50%; pointer-events: none; }
+.orb.o1 { width: 320px; height: 320px; top: -120px; inset-inline-start: -100px; border: 1.5px solid rgba(255,255,255,.14); }
+.orb.o2 { width: 200px; height: 200px; bottom: -70px; inset-inline-end: -50px; background: radial-gradient(circle, rgba(143,240,189,.28), transparent 70%); }
+.orb.o3 { width: 110px; height: 110px; top: 40px; inset-inline-end: 30px; border: 1.5px solid rgba(255,255,255,.1); }
+.w-inner { position: relative; width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.w-wave { font-size: 48px; line-height: 1; display: inline-block; transform-origin: 70% 80%; }
+.w-title { margin: 0; font-weight: 800; font-size: clamp(32px, 8vw, 46px); line-height: 1.1; letter-spacing: -.025em; text-wrap: balance; }
+.w-title .word { display: inline-block; }
+.w-sub { margin: 0; opacity: .9; font-size: 16px; max-width: 34ch; }
+.w-clock { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); font-weight: 700; font-size: 13px; }
+.w-clock .t { direction: ltr; font-family: var(--font-display); font-size: 18px; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.login { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 6px; text-align: start; }
+.login label { font-weight: 700; font-size: 13px; opacity: .9; }
+.input {
+  width: 100%; font: inherit; font-weight: 700; font-size: 18px; padding: 14px 16px; border-radius: 14px;
+  border: 1.5px solid rgba(255,255,255,.35); background: rgba(255,255,255,.95); color: #12201a;
+}
+.input::placeholder { color: #7d8c84; font-weight: 600; }
+.input:focus { outline: none; border-color: #ffffff; box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.btn {
+  position: relative; overflow: hidden; width: 100%;
+  font: inherit; font-weight: 800; font-size: 16px; padding: 14px 20px; border-radius: 14px; cursor: pointer;
+  border: 0; background: #ffffff; color: var(--hero-1); display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(23,112,74,.14) 50%, transparent 70%); transform: translateX(-100%); }
+.btn .arrow { display: inline-block; }
+[dir="rtl"] .btn .arrow { transform: scaleX(-1); }
+.btn:disabled { opacity: .65; cursor: default; }
+.link-btn { background: none; border: 0; color: #ffffff; opacity: .85; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; align-self: center; }
+.err { color: #ffd9d1; font-size: 13px; font-weight: 700; min-height: 1.2em; margin: 0; text-align: center; }
+
+/* App hero */
+.hero {
+  position: relative; overflow: hidden; border-radius: 20px; padding: 22px 24px;
+  background: linear-gradient(135deg, var(--hero-1), var(--hero-2)); color: #ffffff;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px;
+}
+[dir="rtl"] .hero { background: linear-gradient(225deg, var(--hero-1), var(--hero-2)); }
+.hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.14); pointer-events: none; }
+.hero::before { width: 260px; height: 260px; inset-inline-end: -80px; top: -110px; }
+.hero::after { width: 160px; height: 160px; inset-inline-end: 30px; top: -40px; border-color: rgba(255,255,255,.09); }
+.hero-top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.clock {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px);
+}
+.clock-time { direction: ltr; font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; letter-spacing: .02em; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 4px; }
+.clock-time .ampm { font-family: var(--font-body); font-size: 13px; font-weight: 800; letter-spacing: .06em; opacity: .85; }
+.clock-meta { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .88; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.live { width: 7px; height: 7px; border-radius: 50%; background: #8ff0bd; box-shadow: 0 0 0 3px rgba(143,240,189,.25); flex: none; }
+.hero .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .8; padding-top: 4px; }
+.hero h1 { position: relative; font-weight: 800; font-size: clamp(28px, 6vw, 36px); line-height: 1.2; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.hero h1 .wave { display: inline-block; transform-origin: 70% 80%; }
+.hero p.sub { position: relative; margin: 0; opacity: .9; max-width: 44ch; }
+.me-row { position: relative; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+.me-row .av { border-color: rgba(255,255,255,.6); }
+.me-row b { font-weight: 800; }
+.me-row .pill-btn { margin-inline-start: auto; }
+.pill-btn { font: inherit; font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); color: #ffffff; }
+.pill-btn:hover { background: rgba(255,255,255,.24); }
+.progress { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.progress .row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; opacity: .92; }
+.bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: #ffffff; transition: width .7s cubic-bezier(.2,.8,.2,1); }
+
+/* Cards */
+.card { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.label { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.av {
+  width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 800; font-size: 13px; color: #ffffff; background: var(--c); border: 2px solid var(--surface);
+}
+.private { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; margin: 0; }
+.private svg { width: 14px; height: 14px; flex: none; }
+.status {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 12px; background: var(--accent-soft);
+}
+.status p { margin: 0; font-weight: 600; }
+.btn-ghost {
+  background: transparent; border: 1.5px solid var(--accent); color: var(--accent);
+  font: inherit; font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+}
+.btn-ghost:hover { background: var(--accent); color: var(--on-accent); }
+
+.board { display: flex; flex-direction: column; gap: 18px; }
+.week { display: flex; flex-direction: column; gap: 8px; }
+.week-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0; }
+.week-head h2 { font-size: 17px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+.week-head span { font-size: 13px; color: var(--muted); font-weight: 600; }
+.days { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.day button {
+  width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface-2);
+  color: inherit; font: inherit; text-align: start; cursor: pointer;
+}
+.day button:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+.day button:disabled { cursor: default; }
+.date { display: flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 6px 0; border-radius: 10px; background: var(--surface); }
+.date .dow { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.date .num { font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1; }
+.info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.info .name { font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tag { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.tag.hot { background: var(--accent); color: var(--on-accent); }
+.who { color: var(--muted); font-size: 13px; }
+.stack { display: flex; align-items: center; }
+.stack .av { width: 30px; height: 30px; font-size: 12px; margin-inline-start: -8px; }
+.stack .av:first-child { margin-inline-start: 0; }
+.empty-dot { width: 30px; height: 30px; border-radius: 50%; border: 1.5px dashed var(--line); }
+.check { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.2); }
+.check svg { width: 16px; height: 16px; }
+.day.mine button { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: 0 6px 18px -6px var(--accent); }
+.day.mine .date { background: rgba(255,255,255,.16); }
+.day.mine .dow, .day.mine .who { color: var(--on-accent); opacity: .85; }
+.day.mine .tag { background: rgba(255,255,255,.2); color: var(--on-accent); }
+.day.mine .stack .av { border-color: var(--accent); }
+
+/* Results */
+.winner { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 14px; background: var(--accent-soft); }
+.winner .big { font-family: var(--font-display); font-weight: 700; font-size: 52px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.r-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.r-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.r-title { font-weight: 800; font-size: 19px; line-height: 1.25; }
+.r-sub { color: var(--muted); font-size: 13px; font-weight: 600; }
+.r-empty { width: 100%; font-weight: 600; }
+.ranks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rank { display: grid; grid-template-columns: 96px minmax(0, 1fr) 30px; gap: 12px; align-items: center; }
+.rank .rl { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.rank .rl small { display: block; color: var(--muted); font-weight: 600; font-size: 12px; }
+.rank.top .rl { color: var(--accent); }
+.track { height: 30px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.fill {
+  height: 100%; width: 0; min-width: 30px; border-radius: 8px; display: flex; align-items: center; gap: 2px; padding-inline-start: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .8s cubic-bezier(.2,.8,.2,1);
+}
+[dir="rtl"] .fill { background: linear-gradient(270deg, var(--accent), var(--accent-2)); }
+.fill .av { width: 22px; height: 22px; font-size: 10px; border-width: 1.5px; border-color: rgba(255,255,255,.7); }
+.rank .cnt { font-family: var(--font-display); font-weight: 700; font-size: 22px; text-align: end; font-variant-numeric: tabular-nums; }
+.voters { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 420px) { .voters { grid-template-columns: 1fr; } .rank { grid-template-columns: 78px minmax(0, 1fr) 26px; } .welcome { min-height: 480px; padding: 40px 18px 30px; } }
+.voter { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); border: 1.5px solid var(--line); min-width: 0; }
+.voter .vt { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.voter .vn { font-weight: 700; overflow-wrap: anywhere; }
+.voter .vd { color: var(--muted); font-size: 12px; font-weight: 600; }
+.voter.pending { border-style: dashed; background: transparent; }
+.voter.pending .av { filter: grayscale(1); opacity: .5; }
+
+/* Arabic letters must stay joined: no tracking or caps there */
+[dir="rtl"] .eyebrow, [dir="rtl"] .label, [dir="rtl"] .tag, [dir="rtl"] .clock-meta, [dir="rtl"] .dow, [dir="rtl"] .hero h1, [dir="rtl"] .week-head h2, [dir="rtl"] .r-eyebrow, [dir="rtl"] .w-title { letter-spacing: 0; text-transform: none; }
+[dir="rtl"] .label, [dir="rtl"] .hero .eyebrow, [dir="rtl"] .r-eyebrow { font-size: 13px; }
+
+.tab:focus-visible, .lang:focus-visible, .day button:focus-visible, .btn-ghost:focus-visible, .btn:focus-visible, .pill-btn:focus-visible, .link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:focus-visible, .pill-btn:focus-visible, .link-btn:focus-visible { outline-color: #ffffff; }
+.note { color: var(--muted); font-size: 13px; margin: 0; text-align: center; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 160%);
+  background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 14px;
+  box-shadow: var(--shadow); max-width: calc(100% - 32px); text-align: center; pointer-events: none;
+}
+.toast.show { transform: translate(-50%, 0); }
+
+@keyframes rise { from { transform: translateY(14px); opacity: .25; } to { transform: none; opacity: 1; } }
+@keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
+@keyframes wave { 0%,60%,100% { transform: rotate(0); } 10%,30% { transform: rotate(16deg); } 20%,40% { transform: rotate(-8deg); } }
+@keyframes picked { 0% { transform: scale(1); } 40% { transform: scale(1.03); } 100% { transform: scale(1); } }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes swap { from { transform: translateY(6px); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes shake { 0%,100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+@keyframes float1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(24px, 18px); } }
+@keyframes float2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20px,-16px) scale(1.12); } }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 60%,100% { transform: translateX(100%); } }
+@keyframes nudge { 0%,100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+@keyframes zoomOut { to { transform: scale(.96); opacity: .3; } }
+@media (prefers-reduced-motion: no-preference) {
+  .hero, .card, .welcome { animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+  .card:nth-of-type(2) { animation-delay: .08s; }
+  .card:nth-of-type(3) { animation-delay: .16s; }
+  .w-inner > * { animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+  .w-inner > :nth-child(1) { animation-name: pop; animation-delay: .1s; }
+  .w-inner > :nth-child(3) { animation-delay: .55s; }
+  .w-inner > :nth-child(4) { animation-delay: .7s; }
+  .w-inner > :nth-child(5) { animation-delay: .85s; }
+  .w-title .word { animation: rise .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(.2s + var(--i) * .09s); }
+  .w-wave { animation: pop .5s cubic-bezier(.3,1.6,.5,1) both, wave 2.2s ease-in-out .7s 3; }
+  .orb.o1 { animation: float1 9s ease-in-out infinite; }
+  .orb.o2 { animation: float2 7s ease-in-out infinite; }
+  .orb.o3 { animation: float1 6s ease-in-out infinite reverse; }
+  .btn::after { animation: shimmer 2.8s ease-in-out 1.2s infinite; }
+  .btn:hover .arrow { animation: nudge .6s ease-in-out infinite; }
+  [dir="rtl"] .btn:hover .arrow { animation: none; }
+  .hero h1 .wave { animation: wave 2.2s ease-in-out .6s 2; }
+  .live { animation: blink 2s ease-in-out infinite; }
+  .stack .av, .check { animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
+  .tab, .lang, .day button, .btn-ghost, .btn, .input, .pill-btn { transition: transform .18s, border-color .18s, background .18s, color .18s, box-shadow .18s; }
+  .day.just button { animation: picked .45s ease; }
+  .wrap.swapping .hero, .wrap.swapping .card, .wrap.swapping .welcome { animation: swap .4s cubic-bezier(.2,.8,.2,1) both; }
+  .welcome.leaving { animation: zoomOut .3s ease forwards; }
+  .input.bad { animation: shake .3s ease; }
+  .toast { transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+}
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+
+html { color-scheme: light; }
+body { margin: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap" data-stage="login" data-view="pick">
+  <div class="topbar">
+    <div class="tabs app-only" role="tablist" id="tabs" hidden>
+      <button class="tab" id="tabPick" role="tab" type="button">Choose days</button>
+      <button class="tab" id="tabResults" role="tab" type="button"><svg class="lock" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg><span id="tabResultsText">Results</span></button>
+    </div>
+    <span class="spacer"></span>
+    <button class="lang" id="langBtn" type="button"><span class="badge" id="langBadge">ع</span><span id="langText">العربية</span></button>
+  </div>
+
+  <!-- Stage 1: welcome + username -->
+  <section class="welcome login-only" id="welcome">
+    <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+    <div class="w-inner">
+      <span class="w-wave" aria-hidden="true">👋</span>
+      <h1 class="w-title" id="wTitle">Welcome to Nadi Voting Day</h1>
+      <p class="w-sub" id="wSub">Type your username to pick the days you're coming.</p>
+      <form class="login" id="loginForm" novalidate>
+        <label for="username" id="usernameLabel">Your username</label>
+        <input class="input" id="username" name="username" type="text" maxlength="24" autocomplete="username" autocapitalize="words" spellcheck="false">
+        <button class="btn" id="loginBtn" type="submit"><span id="loginBtnText">Continue</span><span class="arrow" aria-hidden="true">→</span></button>
+        <p class="err" id="loginErr" role="alert"></p>
+        <button class="link-btn" id="cancelBtn" type="button" hidden>Cancel</button>
+      </form>
+      <span class="w-clock"><span class="live"></span><span class="t" id="wClock">--:--</span><span id="wZone">Iraq time</span></span>
+    </div>
+  </section>
+
+  <!-- Stage 2: the app -->
+  <section class="hero app-only">
+    <div class="hero-top">
+      <span class="eyebrow"><span id="eyebrow">Nadi plans</span> · <span id="range"></span></span>
+      <div class="clock" role="timer" id="clock">
+        <span class="clock-time"><span id="clockTime">--:--:--</span><span class="ampm" id="clockAmpm"></span></span>
+        <span class="clock-meta"><span class="live"></span><span id="clockZone">Iraq time</span> · <span id="clockDate"></span></span>
+      </div>
+    </div>
+    <h1 id="greet">Welcome</h1>
+    <p class="sub" id="sub"></p>
+    <div class="me-row">
+      <span id="meAv"></span><span><span id="signedAs">Signed in as</span> <b id="meName"></b></span>
+      <button class="pill-btn" id="renameBtn" type="button">Change name</button>
+    </div>
+    <div class="progress" id="progress" hidden>
+      <div class="row"><span id="progLabel"></span><span id="progPct">0%</span></div>
+      <div class="bar"><span id="progBar"></span></div>
+    </div>
+  </section>
+
+  <section class="card app-only pick-only" id="pickCard">
+    <p class="label" id="step2">Choose your days</p>
+    <div class="status"><p id="statusText">Loading…</p><button id="clearBtn" class="btn-ghost" type="button" hidden>Clear my days</button></div>
+    <div class="board" id="board"></div>
+    <p class="private"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg><span id="privateText"></span></p>
+  </section>
+
+  <section class="card app-only results-only">
+    <p class="label" id="resLabel">Vote results</p>
+    <div class="winner" id="winner"></div>
+    <ol class="ranks" id="ranks"></ol>
+  </section>
+
+  <section class="card app-only results-only">
+    <p class="label" id="votersLabel">Who voted for what</p>
+    <ul class="voters" id="voters"></ul>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function () {
+  const API = "/api/votes";
+
+  const PALETTE = ["#c2563b", "#2f6fb5", "#8a4fb8", "#17805a", "#c08419", "#b23a6a", "#3d7f8f", "#5e5aa8", "#7a6a2f", "#3b8a6e"];
+  const colorFor = n => PALETTE[[...n.toLowerCase()].reduce((a, c) => a * 31 + c.charCodeAt(0) >>> 0, 7) % PALETTE.length];
+
+  const I18N = {
+    en: {
+      dir: "ltr", toggleBadge: "ع", toggleText: "العربية", sep: ", ",
+      dow: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+      full: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+      mon: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+      am: "AM", pm: "PM", zone: "Iraq time", clockLabel: "Current time in Iraq",
+      eyebrow: "Nadi Voting Day",
+      wTitle: "Welcome to Nadi Voting Day",
+      wSub: "Type your username to pick the days you're coming.",
+      usernameLabel: "Your username", placeholder: "Your name",
+      cont: "Continue", loadingBtn: "Checking…",
+      morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening",
+      subNone: "Great to have you. Pick every day that works for you below.",
+      subSet: list => "You're coming on " + list + ". See you at the Nadi!",
+      signedAs: "Signed in as", switchUser: "Switch user",
+      progress: (n, t) => n + " of " + t + " have voted",
+      step2: "Choose your days",
+      errName: "Type your username.",
+      errUnknown: "That name isn't on the list. Check the spelling or ask Julian.",
+      errNetwork: "Couldn't reach the votes server. Make sure the site was deployed with GitHub or the Netlify CLI, then try again.",
+      privateMember: "Your votes are private. Only Julian sees the results.",
+      privateOwner: "Only you can see the Results tab.",
+      thisWeek: "This week", nextWeek: "Next week",
+      today: "Today", popular: "Popular", noOne: "No one yet", yourPick: "You're coming", going: n => n + " going",
+      tapDays: "Tap every day you can come. Tap a day again to remove it.",
+      savedN: n => n === 1 ? "1 day picked. Tap more days to add them, or tap it again to remove." : n + " days picked. Tap a day to add or remove it.",
+      saving: "Saving…",
+      remove: "Clear my days",
+      errSave: "Couldn't save your days. Try again in a moment.",
+      tWelcome: n => "Welcome, " + n + "!",
+      tAdded: d => d + " added.",
+      tRemovedDay: d => d + " removed.",
+      tCleared: "All your days cleared.",
+      dayDate: (full, d, m) => full + ", " + d + " " + m,
+      tabPick: "Choose days", tabResults: "Results",
+      resLabel: "Vote results", votersLabel: "Who's coming when",
+      leading: "Most popular day", tie: "It's a tie",
+      votesOf: (n, t) => n + " of " + t + " coming",
+      noVotes: "No votes yet. Share the link so everyone can vote.",
+      noVote: "Signed in, no days yet", notJoined: "Hasn't signed in yet",
+      short: (d, m) => d + " " + m
+    },
+    ar: {
+      dir: "rtl", toggleBadge: "EN", toggleText: "English", sep: "، ",
+      dow: ["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"],
+      full: ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"],
+      mon: ["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"],
+      am: "ص", pm: "م", zone: "توقيت العراق", clockLabel: "الوقت الحالي في العراق",
+      eyebrow: "يوم تصويت النادي",
+      wTitle: "أهلاً بكم في يوم تصويت النادي",
+      wSub: "اكتب اسم المستخدم لتختار الأيام التي ستأتي فيها.",
+      usernameLabel: "اسم المستخدم", placeholder: "اسمك",
+      cont: "متابعة", loadingBtn: "جارٍ التحقق…",
+      morning: "صباح الخير", afternoon: "نهارك سعيد", evening: "مساء الخير",
+      subNone: "سعداء بوجودك. اختر كل الأيام المناسبة لك في الأسفل.",
+      subSet: list => "ستأتي يوم " + list + ". نراك في النادي!",
+      signedAs: "مسجّل باسم", switchUser: "تبديل المستخدم",
+      progress: (n, t) => "صوّت " + n + " من " + t,
+      step2: "اختر أيامك",
+      errName: "اكتب اسم المستخدم.",
+      errUnknown: "هذا الاسم غير موجود في القائمة. تأكد من الكتابة أو اسأل جوليان.",
+      errNetwork: "تعذّر الاتصال بخادم الأصوات. تأكد أن الموقع منشور عبر GitHub أو Netlify CLI ثم حاول مرة أخرى.",
+      privateMember: "أصواتك خاصة. فقط جوليان يرى النتائج.",
+      privateOwner: "فقط أنت ترى تبويب النتائج.",
+      thisWeek: "هذا الأسبوع", nextWeek: "الأسبوع القادم",
+      today: "اليوم", popular: "الأكثر اختياراً", noOne: "لا أحد بعد", yourPick: "ستأتي", going: n => n + " سيحضرون",
+      tapDays: "اضغط على كل يوم تستطيع الحضور فيه. اضغط مرة أخرى لإزالته.",
+      savedN: n => n === 1 ? "اخترت يوماً واحداً. اضغط على أيام أخرى لإضافتها، أو اضغط عليه مرة أخرى لإزالته." : "اخترت " + n + " أيام. اضغط على أي يوم لإضافته أو إزالته.",
+      saving: "جارٍ الحفظ…",
+      remove: "مسح أيامي",
+      errSave: "تعذّر حفظ أيامك. حاول مرة أخرى بعد قليل.",
+      tWelcome: n => "أهلاً " + n + "!",
+      tAdded: d => "تمت إضافة " + d + ".",
+      tRemovedDay: d => "تمت إزالة " + d + ".",
+      tCleared: "تم مسح كل أيامك.",
+      dayDate: (full, d, m) => full + " " + d + " " + m,
+      tabPick: "اختر الأيام", tabResults: "النتائج",
+      resLabel: "نتائج التصويت", votersLabel: "من سيأتي ومتى",
+      leading: "اليوم الأكثر اختياراً", tie: "تعادل",
+      votesOf: (n, t) => n + " من " + t + " سيحضرون",
+      noVotes: "لا توجد أصوات بعد. شارك الرابط حتى يصوّت الجميع.",
+      noVote: "سجّل ولم يختر أياماً بعد", notJoined: "لم يسجّل بعد",
+      short: (d, m) => d + " " + m
+    }
+  };
+  const AR_NAMES = {}; // filled from the server's replies
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  let lang = store.get("nadi-lang") === "ar" ? "ar" : "en";
+  const T = () => I18N[lang];
+  const nm = n => (lang === "ar" && AR_NAMES[n]) || n;
+
+  const pad = n => String(n).padStart(2, "0");
+  const key = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const fmt = d => T().short(d.getDate(), T().mon[d.getMonth()]);
+  const longDay = d => T().dayDate(T().full[d.getDay()], d.getDate(), T().mon[d.getMonth()]);
+
+  // All dates and times follow Iraq time (Asia/Baghdad), whatever the viewer's device is set to
+  const partsFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Baghdad", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  function iqNow() { const o = {}; partsFmt.formatToParts(new Date()).forEach(p => { if (p.type !== "literal") o[p.type] = +p.value; }); return o; }
+
+  let today, last, thisWeekEnd, days, validKeys;
+  function buildDays() {
+    const n = iqNow();
+    today = new Date(n.year, n.month - 1, n.day);
+    const toSun = (7 - today.getDay()) % 7;
+    last = new Date(today); last.setDate(today.getDate() + toSun + 7);
+    thisWeekEnd = new Date(today); thisWeekEnd.setDate(today.getDate() + toSun);
+    days = [];
+    for (let d = new Date(today); d <= last; d.setDate(d.getDate() + 1)) days.push(new Date(d));
+    validKeys = new Set(days.map(key));
+  }
+  buildDays();
+  const greetFor = h => h < 12 ? T().morning : h < 18 ? T().afternoon : T().evening;
+  const dateOf = k => days.find(x => key(x) === k);
+
+  // me: {name, days[]}. all: [{name, joined, days[]}] — only the server's owner account receives it.
+  const state = { me: null, all: null, owner: false, busy: false, error: "", just: null };
+
+  const $ = id => document.getElementById(id);
+  const toastEl = $("toast"); let toastT;
+  function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("show"), 2400); }
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function avatar(n) { const a = el("span", "av", nm(n).charAt(0).toUpperCase()); a.style.setProperty("--c", colorFor(n)); a.title = nm(n); return a; }
+  const myDays = () => state.me ? state.me.days.filter(k => validKeys.has(k)).sort() : [];
+
+  async function api(method, body) {
+    const url = method === "GET" ? API + "?user=" + encodeURIComponent(body.user) : API;
+    let res;
+    try {
+      res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: method === "GET" ? undefined : JSON.stringify(body) });
+    } catch (e) { throw { code: "network" }; }
+    const isJson = (res.headers.get("content-type") || "").includes("application/json");
+    if (!isJson) throw { code: "network" };
+    const data = await res.json();
+    if (!res.ok) throw { code: data.error === "unknown_name" ? "unknown" : "server" };
+    return data;
+  }
+
+  function absorb(data) {
+    [data.me, ...(data.all || [])].forEach(p => { if (p && p.ar) AR_NAMES[p.name] = p.ar; });
+    if (data.me) state.me = { name: data.me.name, days: data.me.days || [] };
+    if (data.owner) { state.owner = true; state.all = data.all || []; }
+  }
+
+  async function refresh() {
+    if (!state.me) return;
+    absorb(await api("GET", { user: state.me.name }));
+  }
+
+  function splitTitle(text) {
+    const h = $("wTitle"); h.textContent = "";
+    text.split(" ").forEach((w, i, arr) => {
+      const s = el("span", "word", w); s.style.setProperty("--i", i); h.append(s);
+      if (i < arr.length - 1) h.append(document.createTextNode(" "));
+    });
+  }
+
+  function applyLang() {
+    const t = T();
+    document.documentElement.lang = lang;
+    document.documentElement.dir = t.dir;
+    document.title = t.eyebrow;
+    $("langBadge").textContent = t.toggleBadge;
+    $("langText").textContent = t.toggleText;
+    $("langBtn").setAttribute("lang", lang === "en" ? "ar" : "en");
+    splitTitle(t.wTitle);
+    $("wSub").textContent = t.wSub;
+    $("usernameLabel").textContent = t.usernameLabel;
+    $("username").placeholder = t.placeholder;
+    $("cancelBtn").hidden = true;
+    $("wZone").textContent = t.zone;
+    $("eyebrow").textContent = t.eyebrow;
+    $("clockZone").textContent = t.zone;
+    $("clock").setAttribute("aria-label", t.clockLabel);
+    $("signedAs").textContent = t.signedAs;
+    $("renameBtn").textContent = t.switchUser;
+    $("step2").textContent = t.step2;
+    $("clearBtn").textContent = t.remove;
+    $("tabPick").textContent = t.tabPick;
+    $("tabResultsText").textContent = t.tabResults;
+    $("resLabel").textContent = t.resLabel;
+    $("votersLabel").textContent = t.votersLabel;
+  }
+
+  // day key -> [names], from everyone's lists (owner only)
+  function tally() {
+    const byDay = {};
+    (state.all || []).forEach(p => (p.days || []).forEach(k => { if (validKeys.has(k)) (byDay[k] = byDay[k] || []).push(p.name); }));
+    return byDay;
+  }
+
+  function render() {
+    const t = T();
+    const stage = state.me ? "app" : "login";
+    $("wrap").dataset.stage = stage;
+    $("loginBtnText").textContent = state.busy && stage === "login" ? t.loadingBtn : t.cont;
+    $("loginBtn").disabled = state.busy;
+    if (stage === "login") return;
+
+    const m = state.me, owner = state.owner, mine = myDays();
+    $("range").textContent = fmt(today) + " – " + fmt(last);
+    const greet = $("greet"); greet.textContent = "";
+    greet.append(document.createTextNode(greetFor(iqNow().hour) + (lang === "ar" ? " يا " : ", ") + nm(m.name) + " "));
+    greet.append(el("span", "wave", "👋"));
+    $("sub").textContent = mine.length ? t.subSet(mine.map(k => t.full[dateOf(k).getDay()] + " " + dateOf(k).getDate()).join(t.sep)) : t.subNone;
+    $("meName").textContent = nm(m.name);
+    const av = $("meAv"); av.textContent = ""; av.append(avatar(m.name));
+
+    $("progress").hidden = !owner;
+    if (owner) {
+      const everyone = state.all || [];
+      const voted = everyone.filter(p => (p.days || []).some(k => validKeys.has(k))).length;
+      const pct = everyone.length ? Math.round(voted / everyone.length * 100) : 0;
+      $("progLabel").textContent = t.progress(voted, everyone.length);
+      $("progPct").textContent = pct + "%";
+      $("progBar").style.width = pct + "%";
+    }
+    $("tabs").hidden = !owner;
+    $("privateText").textContent = owner ? t.privateOwner : t.privateMember;
+
+    const byDay = owner ? tally() : {};
+    const max = Math.max(0, ...Object.values(byDay).map(a => a.length));
+    const board = $("board"); board.textContent = "";
+    [
+      { title: t.thisWeek, list: days.filter(d => d <= thisWeekEnd) },
+      { title: t.nextWeek, list: days.filter(d => d > thisWeekEnd) }
+    ].forEach(g => {
+      if (!g.list.length) return;
+      const wrap = el("div", "week");
+      const head = el("div", "week-head");
+      head.append(el("h2", null, g.title), el("span", null, fmt(g.list[0]) + " – " + fmt(g.list[g.list.length - 1])));
+      const ul = el("ul", "days");
+      g.list.forEach(d => {
+        const k = key(d);
+        const picked = mine.includes(k);
+        const names = byDay[k] || [];
+        const li = el("li", "day" + (picked ? " mine" : "") + (state.just === k ? " just" : ""));
+        const b = el("button"); b.type = "button"; b.id = "day-" + k;
+        b.disabled = state.busy;
+        b.setAttribute("aria-pressed", picked ? "true" : "false");
+        const date = el("span", "date");
+        date.append(el("span", "dow", t.dow[d.getDay()]), el("span", "num", d.getDate()));
+        const info = el("span", "info");
+        const dn = el("span", "name", t.full[d.getDay()]);
+        if (k === key(today)) dn.append(el("span", "tag", t.today));
+        if (owner && max > 1 && names.length === max) dn.append(el("span", "tag hot", t.popular));
+        info.append(dn);
+        const stack = el("span", "stack");
+        if (owner) {
+          info.append(el("span", "who", names.length ? names.map(nm).join(t.sep) : t.noOne));
+          if (names.length) names.forEach(n => stack.append(avatar(n))); else stack.append(el("span", "empty-dot"));
+          stack.setAttribute("aria-label", t.going(names.length));
+        } else if (picked) {
+          info.append(el("span", "who", t.yourPick));
+          const c = el("span", "check");
+          c.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+          stack.append(c);
+        } else stack.append(el("span", "empty-dot"));
+        b.append(date, info, stack);
+        b.addEventListener("click", () => toggle(k));
+        li.append(b); ul.append(li);
+      });
+      wrap.append(head, ul); board.append(wrap);
+    });
+    state.just = null;
+
+    $("statusText").textContent = state.error ? t[state.error] : state.busy ? t.saving : mine.length ? t.savedN(mine.length) : t.tapDays;
+    $("clearBtn").hidden = !mine.length;
+    $("clearBtn").disabled = state.busy;
+
+    if (!owner && view === "results") setView("pick", false);
+    renderResults(false);
+  }
+
+  function renderResults(animate) {
+    if (!state.owner) return;
+    const t = T();
+    const everyone = state.all || [];
+    const byDay = tally();
+    const ranked = days.filter(d => byDay[key(d)]).sort((a, b) => byDay[key(b)].length - byDay[key(a)].length || a - b);
+    const total = Math.max(1, everyone.length);
+    const max = ranked.length ? byDay[key(ranked[0])].length : 0;
+
+    const winner = $("winner"); winner.textContent = "";
+    const ranks = $("ranks"); ranks.textContent = "";
+    if (!ranked.length) winner.append(el("div", "r-empty", t.noVotes));
+    else {
+      const tops = ranked.filter(d => byDay[key(d)].length === max);
+      const box = el("div", "r-text");
+      box.append(
+        el("span", "r-eyebrow", tops.length > 1 ? t.tie : t.leading),
+        el("span", "r-title", tops.map(longDay).join(" / ")),
+        el("span", "r-sub", t.votesOf(max, total) + " · " + byDay[key(tops[0])].map(nm).join(t.sep))
+      );
+      winner.append(el("span", "big", max), box);
+      ranked.forEach(d => {
+        const names = byDay[key(d)];
+        const li = el("li", "rank" + (names.length === max ? " top" : ""));
+        const rl = el("span", "rl", t.full[d.getDay()]); rl.append(el("small", null, fmt(d)));
+        const track = el("span", "track"); const fill = el("span", "fill");
+        names.forEach(n => fill.append(avatar(n)));
+        const pct = names.length / total * 100 + "%";
+        if (animate) { fill.style.width = "0"; requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = pct; })); }
+        else fill.style.width = pct;
+        track.append(fill);
+        li.append(rl, track, el("span", "cnt", names.length));
+        ranks.append(li);
+      });
+    }
+
+    const daysOf = p => (p.days || []).filter(k => validKeys.has(k)).sort();
+    const rank = p => daysOf(p).length ? 0 : p.joined ? 1 : 2;
+    const voters = $("voters"); voters.textContent = "";
+    everyone.slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).forEach(p => {
+      const ds = daysOf(p);
+      const li = el("li", "voter" + (ds.length ? "" : " pending"));
+      const txt = el("span", "vt");
+      txt.append(el("span", "vn", nm(p.name)), el("span", "vd", ds.length ? ds.map(k => t.dow[dateOf(k).getDay()] + " " + dateOf(k).getDate()).join(t.sep) : p.joined ? t.noVote : t.notJoined));
+      li.append(avatar(p.name), txt);
+      voters.append(li);
+    });
+  }
+
+  async function signIn(typed, quiet) {
+    state.busy = true; render();
+    try {
+      const data = await api("GET", { user: typed });
+      state.me = null; state.all = null; state.owner = false;
+      absorb(data);
+      if (!data.all || !data.all.find(p => p.name === data.me.name && p.joined)) {
+        // record that this person signed in, so Julian sees them as joined
+        api("POST", { user: data.me.name }).then(() => { if (state.owner) refresh().then(render).catch(() => {}); }).catch(() => {});
+      }
+      store.set("nadi-user", state.me.name);
+      if (!quiet) {
+        const w = $("welcome"); w.classList.add("leaving");
+        await new Promise(r => setTimeout(r, 280));
+        w.classList.remove("leaving");
+        toast(T().tWelcome(nm(state.me.name)));
+      }
+      if (state.owner && location.hash === "#results") setView("results", false);
+    } catch (e) {
+      state.me = null; state.all = null; state.owner = false;
+      if (quiet) store.set("nadi-user", null);
+      const input = $("username");
+      $("loginErr").textContent = e && e.code === "unknown" ? T().errUnknown : T().errNetwork;
+      if (e && e.code === "unknown") { input.classList.remove("bad"); void input.offsetWidth; input.classList.add("bad"); }
+    }
+    state.busy = false; render();
+  }
+
+  $("loginForm").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const input = $("username");
+    if (!input.value.trim()) {
+      $("loginErr").textContent = T().errName;
+      input.classList.remove("bad"); void input.offsetWidth; input.classList.add("bad"); input.focus();
+      return;
+    }
+    if (state.busy) return;
+    $("loginErr").textContent = "";
+    signIn(input.value, false);
+  });
+  $("username").addEventListener("input", () => { $("loginErr").textContent = ""; });
+
+  $("renameBtn").addEventListener("click", () => {
+    store.set("nadi-user", null);
+    state.me = null; state.all = null; state.owner = false; state.error = "";
+    setView("pick", false); render();
+    const i = $("username"); i.value = ""; i.focus();
+  });
+
+  async function saveDays(next, msg) {
+    if (!state.me || state.busy) return;
+    const prev = state.me.days;
+    state.me = { name: state.me.name, days: next };
+    if (state.owner && state.all) { const p = state.all.find(x => x.name === state.me.name); if (p) { p.days = next; p.joined = true; } }
+    state.busy = true; state.error = ""; render();
+    try {
+      const data = await api("POST", { user: state.me.name, days: next });
+      if (data.me) absorb({ me: data.me });
+      toast(msg);
+    } catch (e) {
+      state.me = { name: state.me.name, days: prev };
+      if (state.owner && state.all) { const p = state.all.find(x => x.name === state.me.name); if (p) p.days = prev; }
+      state.error = "errSave";
+    }
+    state.busy = false; render();
+  }
+  function toggle(k) {
+    if (!state.me) return;
+    const cur = myDays();
+    const d = dateOf(k), label = T().full[d.getDay()] + " " + d.getDate();
+    if (cur.includes(k)) saveDays(cur.filter(x => x !== k), T().tRemovedDay(label));
+    else { state.just = k; saveDays([...cur, k].sort(), T().tAdded(label)); }
+  }
+  $("clearBtn").addEventListener("click", () => saveDays([], T().tCleared));
+
+  let view = "pick";
+  function setView(v, anim) {
+    view = v;
+    const w = $("wrap");
+    w.dataset.view = v;
+    $("tabPick").setAttribute("aria-selected", v === "pick" ? "true" : "false");
+    $("tabResults").setAttribute("aria-selected", v === "results" ? "true" : "false");
+    if (anim) { w.classList.remove("swapping"); void w.offsetWidth; w.classList.add("swapping"); }
+    if (v === "results") renderResults(true);
+  }
+  $("tabPick").addEventListener("click", () => { if (view !== "pick") setView("pick", true); });
+  $("tabResults").addEventListener("click", () => {
+    if (view === "results" || !state.owner) return;
+    setView("results", true);
+    refresh().then(() => { render(); renderResults(true); }).catch(() => {});
+  });
+
+  $("langBtn").addEventListener("click", () => {
+    lang = lang === "en" ? "ar" : "en";
+    store.set("nadi-lang", lang);
+    const w = $("wrap"); w.classList.remove("swapping"); void w.offsetWidth; w.classList.add("swapping");
+    $("loginErr").textContent = "";
+    applyLang(); render(); tick();
+  });
+
+  // Julian's view refreshes every 10 seconds so new votes appear on their own
+  setInterval(() => {
+    if (!state.owner || state.busy || document.hidden) return;
+    refresh().then(render).catch(() => {});
+  }, 10000);
+
+  // Live Iraq clock; at midnight the day list rolls forward, and the greeting follows the hour
+  let lastHour = iqNow().hour;
+  function tick() {
+    const n = iqNow();
+    const h12 = n.hour % 12 || 12, ap = n.hour < 12 ? T().am : T().pm;
+    $("clockTime").textContent = h12 + ":" + pad(n.minute) + ":" + pad(n.second);
+    $("clockAmpm").textContent = ap;
+    $("wClock").textContent = h12 + ":" + pad(n.minute) + " " + ap;
+    const d = new Date(n.year, n.month - 1, n.day);
+    $("clockDate").textContent = T().full[d.getDay()] + " " + fmt(d);
+    if (key(d) !== key(today)) { buildDays(); render(); }
+    else if (n.hour !== lastHour) render();
+    lastHour = n.hour;
+  }
+
+  applyLang(); setView("pick", false); render(); tick(); setInterval(tick, 1000);
+
+  const saved = store.get("nadi-user");
+  if (saved && saved.trim()) signIn(saved, true);
+})();
+</script>
+</body>
+</html>

@@ -509,13 +509,13 @@ img { max-width: 100%; }
 
   function absorb(data) {
     [data.me, ...(data.all || [])].forEach(p => { if (p && p.ar) AR_NAMES[p.name] = p.ar; });
-    if (data.me) state.me = { name: data.me.name, days: data.me.days || [] };
+    if (data.me) state.me = { name: data.me.name, login: data.me.login || data.me.name, days: data.me.days || [] };
     if (data.owner) { state.owner = true; state.all = data.all || []; }
   }
 
   async function refresh() {
     if (!state.me) return;
-    absorb(await api("GET", { user: state.me.name }));
+    absorb(await api("GET", { user: state.me.login }));
   }
 
   function splitTitle(text) {
@@ -709,9 +709,9 @@ img { max-width: 100%; }
       absorb(data);
       if (!data.all || !data.all.find(p => p.name === data.me.name && p.joined)) {
         // record that this person signed in, so Julian sees them as joined
-        api("POST", { user: data.me.name }).then(() => { if (state.owner) refresh().then(render).catch(() => {}); }).catch(() => {});
+        api("POST", { user: data.me.login || data.me.name }).then(() => { if (state.owner) refresh().then(render).catch(() => {}); }).catch(() => {});
       }
-      store.set("nadi-user", state.me.name);
+      store.set("nadi-user", state.me.login);
       if (!quiet) {
         const w = $("welcome"); w.classList.add("leaving");
         await new Promise(r => setTimeout(r, 280));
@@ -753,15 +753,15 @@ img { max-width: 100%; }
   async function saveDays(next, msg) {
     if (!state.me || state.busy) return;
     const prev = state.me.days;
-    state.me = { name: state.me.name, days: next };
+    state.me = { name: state.me.name, login: state.me.login, days: next };
     if (state.owner && state.all) { const p = state.all.find(x => x.name === state.me.name); if (p) { p.days = next; p.joined = true; } }
     state.busy = true; state.error = ""; render();
     try {
-      const data = await api("POST", { user: state.me.name, days: next });
+      const data = await api("POST", { user: state.me.login, days: next });
       if (data.me) absorb({ me: data.me });
       toast(msg);
     } catch (e) {
-      state.me = { name: state.me.name, days: prev };
+      state.me = { name: state.me.name, login: state.me.login, days: prev };
       if (state.owner && state.all) { const p = state.all.find(x => x.name === state.me.name); if (p) p.days = prev; }
       state.error = "errSave";
     }

@@ -6,14 +6,14 @@ const MEMBERS = [
   { name: "Rodas",  ar: "رودس" },
   { name: "Andi",   ar: "آندي" },
   { name: "Rayan",  ar: "ريان" },
-  { name: "Administrator", ar: "المسؤول", key: "julian" },
+  { name: "Julian", ar: "جوليان", key: "julian", logins: ["Administrator", "المسؤول"] },
   { name: "Ziad",   ar: "زياد" },
   { name: "Onel",   ar: "أونيل" },
   { name: "Anwar",  ar: "أنور", aliases: ["Ano", "أنو"] }
 ];
 
 // This member sees everyone's votes
-const OWNER = "Administrator";
+const OWNER = "Julian";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -24,9 +24,11 @@ const json = (body, status = 200) =>
 const clean = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
 const findMember = (typed) => {
   const t = clean(typed);
-  return MEMBERS.find((m) => [m.name, m.ar, ...(m.aliases || [])].some((n) => clean(n) === t)) || null;
+  return MEMBERS.find((m) => (m.logins || [m.name, m.ar, ...(m.aliases || [])]).some((n) => clean(n) === t)) || null;
 };
 const keyOf = (member) => member.key || member.name.toLowerCase();
+// What the person types to sign in ("logins" replaces the shown name when set)
+const loginOf = (member) => (member.logins ? member.logins[0] : member.name);
 const validDays = (days) =>
   Array.isArray(days) && days.length <= 31 && days.every((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
 
@@ -43,7 +45,7 @@ export default async (req) => {
     if (!member) return json({ error: "unknown_name" }, 404);
 
     const mine = (await store.get(keyOf(member), { type: "json" })) || { name: member.name, days: [] };
-    const me = { name: member.name, ar: member.ar, days: mine.days || [] };
+    const me = { name: member.name, login: loginOf(member), ar: member.ar, days: mine.days || [] };
     if (member.name !== OWNER) return json({ me });
 
     const all = await Promise.all(
@@ -70,7 +72,7 @@ export default async (req) => {
       at: new Date().toISOString()
     };
     await store.setJSON(keyOf(member), record);
-    return json({ me: { name: record.name, ar: member.ar, days: record.days } });
+    return json({ me: { name: record.name, login: loginOf(member), ar: member.ar, days: record.days } });
   }
 
   return json({ error: "method_not_allowed" }, 405);

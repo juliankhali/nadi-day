@@ -482,7 +482,7 @@ img { max-width: 100%; }
   }
   buildDays();
   const greetFor = h => h < 12 ? T().morning : h < 18 ? T().afternoon : T().evening;
-  const dateOf = k => days.find(x => key(x) === k);
+  const dateOf = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 
   // me: {name, days[]}. all: [{name, joined, days[]}] — only the server's owner account receives it.
   const state = { me: null, all: null, owner: false, busy: false, error: "", just: null };
@@ -643,20 +643,29 @@ img { max-width: 100%; }
     renderResults(false);
   }
 
+  // Results count every saved day, including days that have already passed
+  function tallyAll() {
+    const byDay = {};
+    (state.all || []).forEach(p => (p.days || []).forEach(k => { if (/^\d{4}-\d{2}-\d{2}$/.test(k)) (byDay[k] = byDay[k] || []).push(p.name); }));
+    return byDay;
+  }
+
   function renderResults(animate) {
     if (!state.owner) return;
     const t = T();
     const everyone = state.all || [];
-    const byDay = tally();
-    const ranked = days.filter(d => byDay[key(d)]).sort((a, b) => byDay[key(b)].length - byDay[key(a)].length || a - b);
+    const byDay = tallyAll();
+    const ranked = Object.keys(byDay).map(dateOf).sort((a, b) => byDay[key(b)].length - byDay[key(a)].length || a - b);
     const total = Math.max(1, everyone.length);
-    const max = ranked.length ? byDay[key(ranked[0])].length : 0;
+    const upcoming = ranked.filter(d => validKeys.has(key(d)));
+    const pool = upcoming.length ? upcoming : ranked;
+    const max = pool.length ? byDay[key(pool[0])].length : 0;
 
     const winner = $("winner"); winner.textContent = "";
     const ranks = $("ranks"); ranks.textContent = "";
     if (!ranked.length) winner.append(el("div", "r-empty", t.noVotes));
     else {
-      const tops = ranked.filter(d => byDay[key(d)].length === max);
+      const tops = pool.filter(d => byDay[key(d)].length === max);
       const box = el("div", "r-text");
       box.append(
         el("span", "r-eyebrow", tops.length > 1 ? t.tie : t.leading),
@@ -679,7 +688,7 @@ img { max-width: 100%; }
       });
     }
 
-    const daysOf = p => (p.days || []).filter(k => validKeys.has(k)).sort();
+    const daysOf = p => (p.days || []).slice().sort();
     const rank = p => daysOf(p).length ? 0 : p.joined ? 1 : 2;
     const voters = $("voters"); voters.textContent = "";
     everyone.slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).forEach(p => {

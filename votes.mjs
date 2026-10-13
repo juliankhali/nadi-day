@@ -30,6 +30,11 @@ const keyOf = (member) => member.key || member.name.toLowerCase();
 const validDays = (days) =>
   Array.isArray(days) && days.length <= 31 && days.every((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
 
+// Days before today (Iraq time) are never removed, so past votes stay in the results
+const todayIQ = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const keepPast = (list) => { const t = todayIQ(); return list.filter((d) => d < t); };
+
 export default async (req) => {
   const store = getStore({ name: "nadi-votes", consistency: "strong" });
 
@@ -61,7 +66,7 @@ export default async (req) => {
     const existing = await store.get(keyOf(member), { type: "json" });
     const record = {
       name: member.name,
-      days: days === null ? (existing && existing.days) || [] : [...new Set(days)].sort(),
+      days: days === null ? (existing && existing.days) || [] : [...new Set([...keepPast((existing && existing.days) || []), ...days])].sort(),
       at: new Date().toISOString()
     };
     await store.setJSON(keyOf(member), record);
